@@ -8,6 +8,9 @@ Proyek ini adalah repositori kustom untuk membangun versi modifikasi dari **Andr
 
 The main objective of this modification is to dismantle and bypass strict security enforcement systems inside modern Android applications (such as advanced encryption, anti-cheat engines, or device integrity checks) that typically block emulator environments or vanilla translation layers.
 
+> 💡 **MODIFICATION DIRECTORY NOTE:** 
+> All pre-compiled modified system binaries, patched libraries, and framework files (including the spoofed APKs and JARs) are stored directly inside the **`usr/`** directory of this repository.
+
 ---
 
 ### 🚀 Advanced Modification Features (Bypass Architecture)
@@ -96,6 +99,9 @@ sudo pacman -S ttf-roboto noto-fonts && fc-cache -fv
 Proyek ini adalah repositori kustom untuk membangun versi modifikasi dari **Android Translation Layer (ATL)** secara native di distribusi Linux Arch-based (dioptimalkan khusus untuk **CachyOS x86_64** dengan **Kernel BORE** dan **COSMIC Desktop Environment**).
 
 Tujuan utama dari modifikasi ini adalah membongkar dan menembus sistem keamanan ketat aplikasi Android modern (seperti enkripsi, anti-cheat, atau pengecekan integritas lingkungan) yang sering memblokir emulator atau layer translasi standar.
+
+> 💡 **CATATAN LOKASI MODIFIKASI:** 
+> Seluruh file biner sistem yang telah dikompilasi ulang, pustaka (*library*) yang ditambal, dan file framework modifikasi disimpan secara langsung di dalam direktori **`usr/`** pada repositori ini.
 
 ---
 
