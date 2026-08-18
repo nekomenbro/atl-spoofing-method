@@ -1,108 +1,183 @@
-A translation layer that allows running Android apps on a Linux system
+# Custom Android Translation Layer (ATL) - Advanced Anti-Detect & Spoofed Edition
 
-![Angry Birds 3.2.0, Worms 2 Armageddon, and Gravity Defied running side by side by side](https://gitlab.com/android_translation_layer/android_translation_layer/-/raw/master/screenshot.png)
-![Oculus Quest version of BeatSaber running on an aarch64 laptop](https://gitlab.com/android_translation_layer/android_translation_layer/-/raw/master/screenshot_2.png)
+---
 
-### Build
-see [build documentation](https://gitlab.com/android_translation_layer/android_translation_layer/-/blob/master/doc/Build.md)
+## 🌍 ENGLISH VERSION
 
-### Run in builddir
-```sh
-cd builddir
-```
-For an example of a full game working that can be distributed along this:
-```sh
-RUN_FROM_BUILDDIR= LD_LIBRARY_PATH=./ ./android-translation-layer /path/to/test_apks/org.happysanta.gd_29.apk -l org/happysanta/gd/GDActivity
-```
-Or for a sample app using OpenGL from native code to do it's rendering:
-```sh
-RUN_FROM_BUILDDIR= LD_LIBRARY_PATH=./ ./android-translation-layer path/to/test_apks/gles3jni.apk -l com/android/gles3jni/GLES3JNIActivity
-```
-Note: the test apks are available at https://gitlab.com/android_translation_layer/atl_test_apks.
+Proyek ini adalah repositori kustom untuk membangun versi modifikasi dari **Android Translation Layer (ATL)** secara native di distribusi Linux Arch-based (dioptimalkan khusus untuk **CachyOS x86_64** dengan **Kernel BORE** dan **COSMIC Desktop Environment**).
 
-### Run after installation
-```sh
-cd builddir
-meson install
-```
+The main objective of this modification is to dismantle and bypass strict security enforcement systems inside modern Android applications (such as advanced encryption, anti-cheat engines, or device integrity checks) that typically block emulator environments or vanilla translation layers.
 
-To run with the default data dir `~/.local/share/android_translation_layer/`:
-```sh
-android-translation-layer [path to apk] [-l activity to launch]
-```
-For custom data dir:
-```sh
-ANDROID_APP_DATA_DIR=[data dir] android-translation-layer [path to apk] [-l activity to launch]
-```
+---
 
-### App data
-As mentioned, the default data dir is `~/.local/share/android_translation_layer/`. The data for each
-app is then stored in `~/.local/share/android_translation_layer/[apk-name]_`. What this means
-in practice is that:
- - we pass this directory to the app where AOSP would pass `/data/data/[app-id]`, and extract native
-libs in `lib/`
- - we pass this directory to the app where AOSP would pass `/storage/emulated/0` (this means OBBs
-will be under `Android/obb/[app-id]/`, and various litter that the app would happily dump on the
-"sdcard" on AOSP will end up here as well)
- - we pass this directory as an additional resource directory to `libandroidfw`, so you can
-for example put something in `assets/file.txt` and if the app tries to load `assets/file.txt` from
-it's apk file, it will be preferentially loaded from here instead (do note that some apps read files
-from the apk by themselves, and some apps do weird things like only load the file in order to find
-it's offset in the apk to then read it out by themselves, so not only will this not always work but
-you will sometimes find out by having the app crash)
- - we extract some additional files from the apk here for our purposes
+### 🚀 Advanced Modification Features (Bypass Architecture)
 
-The reason that we don't use `[app-id]` for the directory name is simply that we don't have access
-to the app id at an early enough point. However, this also allows you to have multiple versions
-of the same app not clash. Feel free to rename the apk to `[app-id]_[version].apk`, or simply
-`[app-id].apk` if you wish to replace it with a different version later and reuse the data dir.
+#### 1. Real-Time Low-Level JNI C Hooking Engine
+High-security Android apps call low-level native libc bionic functions to sniff out the underlying system architecture. This modification intercepts these calls directly inside the heart of the `src/api-impl-jni/util.c` file by completely refactoring the native `__system_property_get` function.
 
-### "install" an apk
-You can pass `--install` on the cmdline to "install" an apk instead of launching it. This will copy
-the apk to `_installed_apks_` in the data dir (`~/.local/share/android_translation_layer/` by default),
-and use the xdp portal to install a `.desktop` file.
+Whenever an APK requests device specifications, our custom C engine hijacks the call and feeds it official **Google Pixel 6 (Raven)** metadata on the fly:
+*   `ro.product.model` → `Pixel 6`
+*   `ro.product.brand` → `google`
+*   `ro.product.manufacturer` → `Google`
+*   `ro.product.device` & `ro.product.product` → `raven`
+*   `ro.build.tags` → `release-keys` *(Hides custom build signatures)*
+*   `ro.build.fingerprint` → `google/raven/raven:12/SP1A.210812.016/7701450:user/release-keys`
+*   `ro.secure` = `1` & `ro.debuggable` = `0` *(Silences root status and active debugger detection)*
+*   **Emulator Memory Eraser**: Any other emulator-tracing system properties outside the defined whitelist are automatically returned as an empty string (`\0`), blinding the APK from discovering the true Linux backend.
 
-### Tweaks
-##### Resolution Changes
-Some apps don't like runtime changes to resolution. To sidestep this, we allow for specifying the initial resolution.
-example with custom width/height:
-```sh
-android-translation-layer path/to/org.happysanta.gd_29.apk -l org/happysanta/gd/GDActivity -w 540 -h 960
-```
+#### 2. Telephony & Permission Bypass (PackageManager)
+Our automation script injects logical bypasses during the compilation of the integrated Android framework. It forces `hasSystemFeature` for the `android.hardware.telephony` feature flag to always return `true`, and grants instant `0` (Granted) access status to the highly sensitive `READ_PHONE_STATE` permission.
 
-#### Potential issues
-- On X11, Gtk might decide to use GLX, which completely messes up our EGL-dependent code.
-Use GDK_DEBUG=gl-egl to force the use of EGL.
-- On Apple Silicon, the page size is non-standard. Upstream ART is only recently getting patches
-to support such non-standard page size, so the version we use obviously doesn't have any. While there
-will probably still be some issues with native libraries, you can work around the issue of AOT-compiled
-code not working by adding `-X '-Xnoimage-dex2oat' -X '-Xusejit:false'` to the atl cmdline, which will
-force the use of an interpreter. Make sure to clear `~/.cache/art/` since AOT-compiled oat files will
-still be used if they were generated previously.
+#### 3. Modern Toolchain Mitigation (OpenJDK 26 Tolerance)
+When building on cutting-edge rolling release systems like CachyOS utilizing **Java 26 / OpenJDK 26**, the hulu (upstream) ATL build system crashes entirely (`ninja: build stopped: subcommand failed`) because the Ninja compiler treats old Java 8 source/target arguments as strictly obsolete.
 
-### Contribute
-If you are trying to launch a random app, chances are that we are missing implementations for some stuff that it needs, and we also don't have (sufficiently real looking) stubs for the stuff it says it needs but doesn't really.
+This modification automates compiler tolerance flag injection into the `meson.build` configuration file and spawns a standalone *Javac Wrapper*:
+\`\`\`bash
+-Xlint:-options -Xlint:-rawtypes -Xlint:-unchecked
+\`\`\`
+This cleanly mutes 300+ strict-lint Java warnings without breaking the binary compilation chain.
 
-The workflow is basically to see where it fails (usually a Class or Method was not found) and to create stubs which sufficiently satisfy the app so that it continues trying to launch.
+---
 
-Once the app launches, you may find that some functionality (UI elements, ...) is missing. To enable such functionality, you need to convert the relevant stubs to actual implementation. You can look at simple widgets (e.g. TextView, or ImageView) to see how to implement a widget such that it shows up as a Gtk Widget.
+### 🛠️ Python Patcher Engine Automation
+To prevent escape character constraints on modern shell interpreters like **Fish Shell**, the C code patching process is dynamically processed via an external Python Regular Expression (Regex) engine script:
 
-For more specific instructions, see [doc/QuickHelp.md](https://gitlab.com/android_translation_layer/android_translation_layer/-/blob/master/doc/QuickHelp.md).  
-For general description of the architecure, see [doc/Architecture.md](https://gitlab.com/android_translation_layer/android_translation_layer/-/blob/master/doc/Architecture.md).
+\`\`\`python
+import re
+pattern = r"int\s+__system_property_get\s*\([^)]*\)\s*\{"
+# The regex safely pinpoints the exact original function declaration and inserts the C spoofing block at the top of the function body.
+\`\`\`
 
-If you want to contribute, and find the codebase overwhelming, don't hesitate to open an issue so we can help you out and possibly write more documentation.
+---
 
-### Roadmap
+### 📦 Local Build & Installation Guide
 
-- fix issues mentioned above
+1. **Prepare Your Workspace & Extract Source Code:**
+   \`\`\`bash
+   mkdir -p $HOME/atl_pro && cd $HOME/atl_pro
+   makepkg -od --noconfirm
+   \`\`\`
 
-- fix ugly hacks
+2. **Run Injection & Compilation:**
+   Execute the automated script provided in this repository to inject all structural bypasses into the hulu code, then assemble the binary using the Arch Linux build utility:
+   \`\`\`bash
+   makepkg -efi --noconfirm
+   \`\`\`
 
-- implement more stuff (there is a lot of it, and it won't get done if nobody helps... ideally pick a simple-ish application and stub/implement stuff until it works)
+3. **Install the Resulting Package onto CachyOS:**
+   \`\`\`bash
+   sudo pacman -U *.pkg.tar.zst
+   \`\`\`
 
-- explore using bubblewrap to enforce the security policies that google helpfully forces apps to comply with (and our own security policies, like no internet access for apps which really shouldn't need it and are not scummy enough to refuse to launch without it)
+---
 
-### Tips
+### 🖥️ Graphics Rendering Optimization (Wayland/COSMIC)
 
-- the correct format for changing verbosity of messages going through android's logging library is `ANDROID_LOG_TAGS=*:v` (where `*` is "all tags" and `v` is "verbosity `verbose` or lesser"  
-(note that specifying anything other than `*` as the tag will not work with the host version of liblog)
+If you notice applications (such as WhatsApp) rendering text as blank or stuck on a white/black screen due to *font rendering* bugs on Wayland, force ATL to use a stable fallback graphics rendering engine by injecting environment variables on launch:
+
+\`\`\`bash
+# Option 1: Force Cairo Software Rendering (Highly Stable for Text/Fonts)
+env GSK_RENDERER=cairo android-translation-layer /path/to/app.apk
+
+# Option 2: Force Next-Gen OpenGL Renderer
+env GSK_RENDERER=ngl android-translation-layer /path/to/app.apk
+\`\`\`
+
+Ensure Android-compliant system fonts are installed globally on your Linux host:
+\`\`\`bash
+sudo pacman -S ttf-roboto noto-fonts && fc-cache -fv
+\`\`\`
+
+---
+---
+
+## 🇮🇩 TERJEMAHAN BAHASA INDONESIA
+
+Proyek ini adalah repositori kustom untuk membangun versi modifikasi dari **Android Translation Layer (ATL)** secara native di distribusi Linux Arch-based (dioptimalkan khusus untuk **CachyOS x86_64** dengan **Kernel BORE** dan **COSMIC Desktop Environment**).
+
+Tujuan utama dari modifikasi ini adalah membongkar dan menembus sistem keamanan ketat aplikasi Android modern (seperti enkripsi, anti-cheat, atau pengecekan integritas lingkungan) yang sering memblokir emulator atau layer translasi standar.
+
+---
+
+### 🚀 Fitur Unggulan Modifikasi (Bypass Architecture)
+
+#### 1. Real-Time Low-Level JNI C Hooking Engine
+Aplikasi Android dengan keamanan ketat memanggil fungsi native libc bionik untuk mengendus lingkungan sistem. Modifikasi ini melakukan **interupsi dinamis tepat di jantung file `src/api-impl-jni/util.c`** dengan merombak total fungsi `__system_property_get`.
+
+Setiap kali APK memanggil sistem properti, engine C buatan kami akan langsung memotong dan menyuapi data **Google Pixel 6 (Raven)** resmi:
+*   `ro.product.model` → `Pixel 6`
+*   `ro.product.brand` → `google`
+*   `ro.product.manufacturer` → `Google`
+*   `ro.product.device` & `ro.product.product` → `raven`
+*   `ro.build.tags` → `release-keys` *(Menyamarkan status tanda tangan kustom build)*
+*   `ro.build.fingerprint` → `google/raven/raven:12/SP1A.210812.016/7701450:user/release-keys`
+*   `ro.secure` = `1` & `ro.debuggable` = `0` *(Membungkam deteksi status root/debugger)*
+*   **Emulator Memory Eraser**: Properti sistem pelacak emulator lain di luar daftar di atas akan otomatis dikembalikan sebagai string kosong (`\0`), membuat APK buta terhadap identitas asli Linux.
+
+#### 2. Telephony & Permission Bypass (PackageManager)
+Skrip otomatisasi kami menyuntikkan fungsi bypass logis pada level kompilasi framework Android bawaan untuk memaksa `hasSystemFeature` pada fitur `android.hardware.telephony` selalu bernilai `true`, serta memberikan hak akses instan `0` (Granted) pada izin sensitif `READ_PHONE_STATE`.
+
+#### 3. Mitigasi Modern Toolchain (OpenJDK 26 Tolerance)
+Saat dibangun di atas sistem mutakhir seperti CachyOS yang menggunakan **Java 26 / OpenJDK 26**, sistem kompilasi hulu bawaan ATL akan mengalami macet total (*subcommand failure*) karena Ninja menganggap parameter Java 8 lama sudah usang (*obsolete*).
+
+Modifikasi ini mengotomatiskan injeksi bendera toleransi compiler ke dalam file konfigurasi `meson.build` dan meluncurkan *Wrapper Javac* mandiri:
+\`\`\`bash
+-Xlint:-options -Xlint:-rawtypes -Xlint:-unchecked
+\`\`\`
+Ini membungkam 300+ peringatan *strict-lint* bawaan Java secara bersih tanpa memutus rantai perakitan biner.
+
+---
+
+### 🛠️ Cara Kerja Otomatisasi Script Penambal (Python Engine)
+Untuk menghindari pembatasan karakter lepas (*escape character*) pada interpreter shell modern seperti **Fish Shell**, proses penambalan kode C dilakukan menggunakan mesin ekspresi reguler (Regex) Python eksternal secara dinamis:
+
+\`\`\`python
+import re
+pattern = r"int\s+__system_property_get\s*\([^)]*\)\s*\{"
+# Regex mendeteksi deklarasi fungsi asli lalu menyisipkan blok kode C spoofing tepat di baris atas tubuh fungsi
+\`\`\`
+
+---
+
+### 📦 Panduan Kompilasi & Instalasi Lokal
+
+1. **Persiapkan Lingkungan Kerja & Unduh Source Code:**
+   \`\`\`bash
+   mkdir -p $HOME/atl_pro && cd $HOME/atl_pro
+   makepkg -od --noconfirm
+   \`\`\`
+
+2. **Jalankan Skrip Injeksi & Kompilasi:**
+   Gunakan skrip otomatisasi yang berada di repositori ini untuk menyuntikkan seluruh bypass ke dalam source code, lalu rakit paket biner menggunakan utilitas Arch Linux:
+   \`\`\`bash
+   makepkg -efi --noconfirm
+   \`\`\`
+
+3. **Pasang Paket ke Sistem CachyOS Anda:**
+   \`\`\`bash
+   sudo pacman -U *.pkg.tar.zst
+   \`\`\`
+
+---
+
+### 🖥️ Panduan Optimalisasi Render Grafis (Wayland/COSMIC)
+
+Jika Anda mendapati tampilan aplikasi (seperti WhatsApp) mengalami *blank putih/hitam* karena bug pemrosesan huruf (*font rendering*) pada Wayland, paksa ATL menggunakan *fallback engine* grafis dengan menyuntikkan variabel lingkungan berikut saat meluncurkan APK:
+
+\`\`\`bash
+# Opsi 1: Menggunakan rendering perangkat lunak Cairo (Sangat Stabil untuk Teks)
+env GSK_RENDERER=cairo android-translation-layer /path/ke/aplikasi.apk
+
+# Opsi 2: Menggunakan Next-Gen OpenGL Renderer
+env GSK_RENDERER=ngl android-translation-layer /path/ke/aplikasi.apk
+\`\`\`
+
+Pastikan juga font sistem Android telah terpasang di Linux Anda:
+\`\`\`bash
+sudo pacman -S ttf-roboto noto-fonts && fc-cache -fv
+\`\`\`
+
+---
+
+## ⚖️ License / Lisensi
+Distribusi ulang dan modifikasi tunduk pada lisensi sumber asli ATL.
