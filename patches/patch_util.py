@@ -1,16 +1,18 @@
 import re
-import sys
 
-def apply_patch(file_path):
+def apply_patch():
+    file_path = "src/api-impl-jni/util.c"
     try:
         with open(file_path, "r") as f:
             content = f.read()
-    except FileNotFoundError:
-        print(f"[-] File {file_path} tidak ditemukan.")
+    except Exception as e:
+        print(f"[-] Gagal membaca file: {e}")
         return
 
-    pattern = r"int\s+__system_property_get\s*\([^)]*\)\s*\{"
-    replacement = """int __system_property_get(const char *name, char *value) {
+    # Regex ini mengabaikan tipe data dan spasi, langsung mengincar nama fungsinya
+    pattern = r"(__system_property_get\s*\([^)]*\)\s*\{)"
+    
+    spoof_logic = """
     if (name != NULL) {
         if (strcmp(name, "ro.product.model") == 0) { strcpy(value, "Pixel 6"); return 7; }
         if (strcmp(name, "ro.product.brand") == 0) { strcpy(value, "google"); return 6; }
@@ -23,15 +25,15 @@ def apply_patch(file_path):
         }
     }
 """
-
+    
     if re.search(pattern, content):
-        new_content = re.sub(pattern, replacement, content, count=1)
+        # Menyisipkan modifikasi spoofing langsung setelah kurung kurawal buka "{"
+        new_content = re.sub(pattern, r"\1" + spoof_logic, content, count=1)
         with open(file_path, "w") as f:
             f.write(new_content)
-        print("[+] Python Patcher: Berhasil menyisipkan spoofing properti C-level!")
+        print("[+] Python Patcher: SUPER HOOK berhasil disisipkan permanen ke util.c!")
     else:
-        print("[-] Python Patcher: Signature __system_property_get tidak ditemukan.")
+        print("[-] Python Patcher: Fungsi tetap tidak ditemukan!")
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "src/api-impl-jni/util.c"
-    apply_patch(target)
+    apply_patch()
