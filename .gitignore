@@ -1,5 +1,3 @@
-*
-!PKGBUILD
-!.SRCINFO
-!.gitignore
-!.nvchecker.toml
+# build artifacts
+build/
+builddir/

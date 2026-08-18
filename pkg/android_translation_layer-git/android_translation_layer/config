@@ -1,0 +1,9 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+[remote "origin"]
+	url = https://gitlab.com/android_translation_layer/android_translation_layer.git
+	tagOpt = --no-tags
+	fetch = +refs/*:refs/*
+	mirror = true
